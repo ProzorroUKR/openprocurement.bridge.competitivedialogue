@@ -14,7 +14,6 @@ cache:
 before_install:
   - pip install setuptools==7.0
   - python2 bootstrap.py
-  - sudo apt-get install libsystemd-dev
 install:
   - bin/buildout -N
 script:
