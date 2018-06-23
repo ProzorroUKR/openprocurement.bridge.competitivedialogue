@@ -7,7 +7,7 @@ requires = [
     'setuptools',
     'PyYAML',
     'gevent',
-    'ExtendedJournalHandler',
+    'restkit',
     'openprocurement_client>=1.0b2',
 ]
 
