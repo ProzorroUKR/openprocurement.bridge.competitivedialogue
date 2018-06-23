@@ -11,7 +11,7 @@ before_install:
   - pip install setuptools==7.0
   - python2 bootstrap.py
 install:
-  - sudo apt-get install libsystemd0 libsystemd-dev
+  - sudo apt-get install libsystemd-journal-dev
   - bin/buildout -N
 script:
   - bin/nosetests
