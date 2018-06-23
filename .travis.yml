@@ -11,6 +11,7 @@ before_install:
   - pip install setuptools==7.0
   - python2 bootstrap.py
 install:
+  - dnf install systemd-devel
   - bin/buildout -N
 script:
   - bin/nosetests
