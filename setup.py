@@ -7,7 +7,7 @@ requires = [
     'setuptools',
     'PyYAML',
     'gevent',
-    'ExtendedJournalHandler',
+    'restkit',
     'openprocurement_client>=1.0b2',
 ]
 
@@ -41,7 +41,7 @@ setup(name='openprocurement.bridge.competitivedialogue',
       keywords="web services",
       author='Quintagroup, Ltd.',
       author_email='info@quintagroup.com',
-      url='https://github.com/openprocurement/openprocurement.bridge.competitivedialogue',
+      url='https://github.com/ProzorroUKR/openprocurement.bridge.competitivedialogue',
       license='Apache License 2.0',
       packages=find_packages(exclude=['ez_setup']),
       namespace_packages=['openprocurement', 'openprocurement.bridge'],
