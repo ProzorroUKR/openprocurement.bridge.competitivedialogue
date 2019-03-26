@@ -8,12 +8,13 @@ requires = [
     'PyYAML',
     'gevent',
     'restkit',
-    'openprocurement_client>=1.0b2',
+    'openprocurement_client==1.0b2',
 ]
 
 test_requires = requires + [
     'webtest',
     'python-coveralls',
+    'mock',
 ]
 
 docs_requires = requires + [
