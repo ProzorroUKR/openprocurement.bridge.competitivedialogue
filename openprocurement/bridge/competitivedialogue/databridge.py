@@ -112,7 +112,7 @@ def check_status_response(func):
                 obj.headers['Cookie'] = re.response.headers['Set-Cookie']
                 response = func(obj, *args, **kwargs)
             else:
-                raise ResourceError(re)
+                raise
         return response
     return func_wrapper
 
