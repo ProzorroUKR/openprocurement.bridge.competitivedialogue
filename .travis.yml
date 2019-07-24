@@ -11,11 +11,8 @@ env:
 cache:
   directories:
     - eggs
-before_install:
-  - pip install setuptools==7.0
-  - python2 bootstrap.py
 install:
-  - bin/buildout -N
+  - sh bootstrap.sh
 script:
   - bin/nosetests
 after_success:
