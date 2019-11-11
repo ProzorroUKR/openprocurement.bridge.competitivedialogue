@@ -1,10 +1,8 @@
 from gevent import monkey
-
 monkey.patch_all()
 
 try:
     import urllib3.contrib.pyopenssl
-
     urllib3.contrib.pyopenssl.inject_into_urllib3()
 except ImportError:
     pass
@@ -38,7 +36,8 @@ from openprocurement.bridge.competitivedialogue.journal_msg_ids import (
     DATABRIDGE_CD_PATCHED_STAGE2_ID, DATABRIDGE_PATCH_NEW_TENDER_STATUS, DATABRIDGE_SUCCESSFUL_PATCH_NEW_TENDER_STATUS,
     DATABRIDGE_UNSUCCESSFUL_PATCH_NEW_TENDER_STATUS, DATABRIDGE_PATCH_DIALOG_STATUS,
     DATABRIDGE_UNSUCCESSFUL_PATCH_DIALOG_STATUS, DATABRIDGE_SUCCESSFUL_PATCH_DIALOG_STATUS, DATABRIDGE_ONLY_PATCH,
-    DATABRIDGE_TENDER_STAGE2_NOT_EXIST, DATABRIDGE_CREATE_NEW_STAGE2, DATABRIDGE_WORKER_DIED)
+    DATABRIDGE_TENDER_STAGE2_NOT_EXIST, DATABRIDGE_CREATE_NEW_STAGE2, DATABRIDGE_WORKER_DIED
+)
 
 
 CD_UA_TYPE = "competitiveDialogueUA"
@@ -138,8 +137,12 @@ class TendersClientSync(BaseTendersClientSync):
 
 class CompetitiveDialogueDataBridge(object):
     """ Competitive Dialogue Data Bridge """
-    copy_name_fields = ('title_ru', 'mode', 'procurementMethodDetails', 'title_en', 'description', 'description_en',
-                        'description_ru', 'title', 'minimalStep', 'value', 'procuringEntity', 'submissionMethodDetails')
+    copy_name_fields = (
+        'title', 'title_ru', 'title_en', 'description', 'description_en', 'description_ru',
+        'mode', 'procurementMethodDetails', 'submissionMethodDetails',
+        'minimalStep', 'value',
+        'procuringEntity', 'buyers',
+    )
     rewrite_statuses = ['draft']
     allowed_statuses = ['active.tendering', 'active.pre-qualification', 'active.pre-qualification.stand-still',
                         'active.auction', 'active.qualification', 'active.awarded', 'complete', 'cancelled',
@@ -259,7 +262,7 @@ class CompetitiveDialogueDataBridge(object):
             try:
                 tender_to_sync = self.competitive_dialogues_queue.peek()  # Get competitive dialogue which we want to sync
                 tender = self.tenders_sync_client.get_tender(tender_to_sync['id'])['data']  # Try get data by tender id
-            except Exception, e:
+            except Exception as e:
                 # If we have something problems then put tender back to queue
                 logger.exception(e)
                 logger.info('Putting tender {} back to tenders queue...'.format(tender_to_sync['id']),
@@ -304,8 +307,7 @@ class CompetitiveDialogueDataBridge(object):
                 logger.info('Copy competitive dialogue data, id={} '.format(tender['id']),
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_COPY_TENDER_ITEMS},
                                                   {"TENDER_ID": tender['id']}))
-                new_tender = dict(title=tender['title'], procurementMethod='selective',
-                                  status='draft', dialogueID=tender['id'])
+                new_tender = dict(procurementMethod='selective', status='draft', dialogueID=tender['id'])
 
                 for field_name in self.copy_name_fields:  # Copy fields from stage 1 competitive dialog
                     if field_name in tender:
@@ -367,7 +369,7 @@ class CompetitiveDialogueDataBridge(object):
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_GET_EXTRA_INFO},
                                                   {"TENDER_ID": new_tender['dialogueID']}))
                 tender_data = self.get_tender_credentials(new_tender['dialogueID'])
-            except Exception, e:
+            except Exception as e:
                 logger.exception(e)
                 logger.info("Can't get competitive dialogue credentials, id={0}".format(new_tender['dialogueID']),
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_MISSING_CREDENTIALS},
@@ -418,7 +420,7 @@ class CompetitiveDialogueDataBridge(object):
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_RETRY_CREATE},
                                                   {"TENDER_ID": new_tender['dialogueID']}))
                 self.dialogs_stage2_retry_put_queue.put(new_tender)
-            except Exception, e:
+            except Exception as e:
                 logger.info("Exception, schedule retry for competitive dialogue id={0}".format(new_tender['dialogueID']),
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_RETRY_CREATE},
                                                   {"TENDER_ID": new_tender['dialogueID']}))
@@ -449,7 +451,7 @@ class CompetitiveDialogueDataBridge(object):
             patch_data = {"data": dialog}
             try:
                 res_patch = self.client.patch_tender(patch_data)
-            except Exception, e:
+            except Exception as e:
                 logger.exception(e)
                 logger.info("Unsuccessful patch competitive dialogue id={0} with stage2 tender id".format(dialog['id']),
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_CD_UNSUCCESSFUL_PATCH_STAGE2_ID},
@@ -477,7 +479,7 @@ class CompetitiveDialogueDataBridge(object):
                         extra=journal_context({"MESSAGE_ID": DATABRIDGE_PATCH_DIALOG},
                                               {"TENDER_ID": dialog['id']}))
             self.client.patch_tender(data)
-        except Exception, e:
+        except Exception as e:
             logger.exception(e)
             raise
 
@@ -506,7 +508,7 @@ class CompetitiveDialogueDataBridge(object):
                                               {"TENDER_ID": patch_data["id"]}))
             try:
                 res = self.client.patch_tender({"data": patch_data})
-            except Exception, e:
+            except Exception as e:
                 logger.exception(e)
                 logger.info("Unsuccessful path tender stage2 id={0} with status {1}".format(patch_data['id'], patch_data['status']))
                 logger.info("Schedule retry patch for tender stage2 {0}".format(patch_data['id']),
@@ -528,7 +530,7 @@ class CompetitiveDialogueDataBridge(object):
                         extra=journal_context({"MESSAGE_ID": DATABRIDGE_PATCH_NEW_TENDER_STATUS},
                                               {"TENDER_ID": new_tender['id']}))
             self.client.patch_tender(data)
-        except Exception, e:
+        except Exception as e:
             logger.exception(e)
             raise
 
@@ -540,7 +542,7 @@ class CompetitiveDialogueDataBridge(object):
                                               {"TENDER_ID": patch_data["id"]}))
             try:
                 self.client.patch_tender({"data": patch_data})
-            except Exception, e:
+            except Exception as e:
                 logger.exception(e)
                 logger.info("Unsuccessful path competitive dialogue id={0} with status {1}".format(patch_data['id'], patch_data['status']))
                 logger.info("Schedule retry patch for competitive dialogue id={0}".format(patch_data['id']),
@@ -575,7 +577,7 @@ class CompetitiveDialogueDataBridge(object):
                         extra=journal_context({"MESSAGE_ID": DATABRIDGE_PATCH_DIALOG_STATUS},
                                               {"TENDER_ID": patch_data['id']}))
             self.client.patch_tender(data)
-        except Exception, e:
+        except Exception as e:
             logger.exception(e)
             raise
 
@@ -619,7 +621,7 @@ class CompetitiveDialogueDataBridge(object):
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_UNSUCCESSFUL_CREATE},
                                                   {"TENDER_ID": new_tender['dialogueID']}))
             raise re
-        except Exception, e:
+        except Exception as e:
             logger.exception(e)
             raise
         else:
@@ -661,7 +663,7 @@ class CompetitiveDialogueDataBridge(object):
             logger.warn('Forward worker died!', extra=journal_context({"MESSAGE_ID": DATABRIDGE_WORKER_DIED}, {}))
             logger.error("Error response {}".format(re.message))
             raise re
-        except Exception, e:
+        except Exception as e:
             # TODO reset queues and restart sync
             logger.warn('Forward worker died!', extra=journal_context({"MESSAGE_ID": DATABRIDGE_WORKER_DIED}, {}))
             logger.exception(e)
@@ -685,7 +687,7 @@ class CompetitiveDialogueDataBridge(object):
             logger.warn('Backward worker died!', extra=journal_context({"MESSAGE_ID": DATABRIDGE_WORKER_DIED}, {}))
             logger.error("Error response {}".format(re.message))
             raise re
-        except Exception, e:
+        except Exception as e:
             # TODO reset queues and restart sync
             logger.warn('Backward worker died!', extra=journal_context({"MESSAGE_ID": DATABRIDGE_WORKER_DIED}, {}))
             logger.exception(e)
@@ -782,7 +784,7 @@ class CompetitiveDialogueDataBridge(object):
             logger.info('Exiting...')
             gevent.killall(self.jobs, timeout=5)
             gevent.killall(self.immortal_jobs, timeout=5)
-        except Exception, e:
+        except Exception as e:
             logger.exception(e)
             logger.warn("Restarting synchronization", extra=journal_context({"MESSAGE_ID": DATABRIDGE_RESTART}))
 
